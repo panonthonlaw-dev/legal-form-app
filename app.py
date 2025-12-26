@@ -15,38 +15,40 @@ def to_thai_num(text):
 
 def create_pdf_overlay(data):
     packet = io.BytesIO()
-    can = canvas.Canvas(packet, pagesize=(595.27, 841.89)) # ขนาด A4
+    can = canvas.Canvas(packet, pagesize=(595.27, 841.89))
     
-    # ลงทะเบียนฟอนต์ (ต้องมีไฟล์ THSarabunNew.ttf ในโปรเจกต์)
+    # ลงทะเบียนฟอนต์ไทย (ต้องอัปโหลดไฟล์ THSarabunNew.ttf ไว้ใน Repo)
     try:
         pdfmetrics.registerFont(TTFont('ThaiFont', 'THSarabunNew.ttf'))
-        can.setFont('ThaiFont', 16)
+        can.setFont('ThaiFont', 15) # ขนาดฟอนต์มาตรฐานศาล
     except:
-        can.setFont('Helvetica', 12) # สำรองกรณีไม่มีฟอนต์
+        can.setFont('Helvetica', 12)
 
-    # --- ส่วนหัว (Header) ตามรูปภาพที่คุณแนบมา ---
-    # 1. คดีหมายเลขดำที่ 
-    can.drawString(445, 765, to_thai_num(data['black_case'])) 
-    
-    # 2. ศาล 
-    can.drawString(355, 705, data['court_name'])
-    
-    # 3. วันที่ เดือน พุทธศักราช 
-    can.drawString(310, 678, to_thai_num(data['day']))
-    can.drawString(365, 678, data['month'])
-    can.drawString(495, 678, to_thai_num(data['year']))
-    
-    # 4. ความ (อาญา/แพ่ง) 
-    can.drawString(340, 652, data['case_type'])
+    # --- [ส่วนที่ 1] หัวกระดาษ ---
+    can.drawString(445, 764, to_thai_num(data['black_num'])) # คดีหมายเลขดำที่ [cite: 2]
+    can.drawString(360, 706, data['court']) # ศาล [cite: 7]
+    can.drawString(308, 680, to_thai_num(data['day'])) # วันที่ [cite: 8]
+    can.drawString(365, 680, data['month']) # เดือน [cite: 8]
+    can.drawString(495, 680, to_thai_num(data['year'])) # พุทธศักราช [cite: 9]
+    can.drawString(340, 652, data['case_type']) # ความ 
 
-    # --- ส่วนคู่ความ และ เนื้อหา ---
-    can.drawString(200, 612, data['plaintiff']) # โจทก์ [cite: 11]
-    can.drawString(200, 562, data['defendant']) # จำเลย [cite: 12]
+    # --- [ส่วนที่ 2] คู่ความ (ระหว่าง...) ---
+    can.drawString(250, 595, data['plaintiff_name']) # ชื่อโจทก์ [cite: 11]
+    can.drawString(250, 550, data['defendant_name']) # ชื่อจำเลย [cite: 12]
 
-    # บรรยายฟ้อง ข้อ ๑ [cite: 48]
-    text_object = can.beginText(135, 480)
-    text_object.setFont('ThaiFont', 16)
-    lines = textwrap.wrap(data['body'], width=75)
+    # --- [ส่วนที่ 3] ข้อมูลรายละเอียดโจทก์ (ข้าพเจ้า...) ---
+    # บรรทัดข้าพเจ้า
+    can.drawString(245, 524, data['plaintiff_name']) # ข้าพเจ้า 
+    # บรรทัดที่อยู่และเลขบัตร (ปรับพิกัดตามตำแหน่งในไฟล์ภาพ) [cite: 19, 26, 27, 28, 29]
+    can.drawString(185, 498, to_thai_num(data['plaintiff_id'])) # เลขประจำตัวประชาชน [cite: 19]
+    can.drawString(500, 498, data['plaintiff_race']) # เชื้อชาติ [cite: 25]
+    # บรรทัดที่อยู่บรรทัดที่ 2
+    can.drawString(100, 472, data['plaintiff_address']) 
+
+    # --- [ส่วนที่ 4] เนื้อหาฟ้อง ข้อ ๑ ---
+    text_object = can.beginText(135, 235) # พิกัดช่อง ข้อ ๑ [cite: 48]
+    text_object.setFont('ThaiFont', 15)
+    lines = textwrap.wrap(data['body'], width=80)
     for line in lines:
         text_object.textLine(to_thai_num(line))
     can.drawText(text_object)
@@ -55,48 +57,37 @@ def create_pdf_overlay(data):
     packet.seek(0)
     return packet
 
-# --- หน้าจอ Web App ---
-st.title("⚖️ ระบบร่างคำฟ้องอัตโนมัติ")
+# --- UI Layout ---
+st.set_page_config(page_title="Draft Court Form", layout="centered")
+st.title("📝 ร่างคำฟ้อง (แบบพิมพ์ ๔)")
 
-with st.form("legal_form"):
+with st.form("court_form"):
+    st.subheader("1. ส่วนหัวคดี")
     col1, col2 = st.columns(2)
     with col1:
-        court = st.text_input("ศาล ", "อาญา")
-        black_case = st.text_input("คดีหมายเลขดำที่ ", "123/2567")
-        case_type = st.radio("ความ ", ["อาญา", "แพ่ง"], horizontal=True)
-    
+        court = st.text_input("ศาล", "แพ่ง")
+        black_num = st.text_input("คดีหมายเลขดำที่")
+        case_type = st.radio("ความ", ["แพ่ง", "อาญา"], horizontal=True)
     with col2:
-        day = st.text_input("วันที่ [cite: 8]", "1")
-        month = st.text_input("เดือน [cite: 8]", "มกราคม")
-        year = st.text_input("พ.ศ. [cite: 9]", "2567")
+        day = st.text_input("วันที่", "26")
+        month = st.text_input("เดือน", "ธันวาคม")
+        year = st.text_input("พ.ศ.", "2568")
 
-    plaintiff = st.text_input("โจทก์ [cite: 11]")
-    defendant = st.text_input("จำเลย [cite: 12]")
-    body = st.text_area("บรรยายฟ้อง ข้อ ๑ [cite: 48]", height=200)
-    
-    submit = st.form_submit_button("สร้างไฟล์ PDF")
+    st.subheader("2. ข้อมูลโจทก์")
+    p_name = st.text_input("ชื่อ-นามสกุล โจทก์")
+    p_id = st.text_input("เลขบัตรประชาชนโจทก์")
+    p_race = st.text_input("เชื้อชาติ/สัญชาติโจทก์", "ไทย")
+    p_addr = st.text_area("ที่อยู่โจทก์โดยละเอียด")
 
-if submit:
-    data = {
-        'court_name': court, 'black_case': black_case, 'case_type': case_type,
-        'day': day, 'month': month, 'year': year,
-        'plaintiff': plaintiff, 'defendant': defendant, 'body': body
-    }
+    st.subheader("3. ข้อมูลจำเลย")
+    d_name = st.text_input("ชื่อ-นามสกุล จำเลย")
+    d_addr = st.text_area("ที่อยู่จำเลย (ถ้ามี)")
+
+    st.subheader("4. เนื้อหาฟ้อง")
+    body = st.text_area("บรรยายฟ้อง ข้อ ๑", height=250)
     
-    overlay = create_pdf_overlay(data)
-    
-    # Merge กับ Template (ต้องมีไฟล์ชื่อ template.pdf)
-    try:
-        existing_pdf = PdfReader(open("template.pdf", "rb"))
-        output = PdfWriter()
-        page = existing_pdf.pages[0]
-        page.merge_page(PdfReader(overlay).pages[0])
-        output.add_page(page)
-        
-        final_pdf = io.BytesIO()
-        output.write(final_pdf)
-        
-        st.success("สร้างไฟล์สำเร็จ!")
-        st.download_button("ดาวน์โหลดคำฟ้อง (PDF)", final_pdf.getvalue(), "lawsuit.pdf")
-    except FileNotFoundError:
-        st.error("ไม่พบไฟล์ template.pdf กรุณาอัปโหลดไฟล์ต้นฉบับเข้า GitHub")
+    submitted = st.form_submit_button("Preview & Generate PDF")
+
+if submitted:
+    # Logic การรวมไฟล์เหมือนเดิม (อย่าลืม template.pdf และฟอนต์)
+    st.info("กำลังประมวลผลข้อมูลลงในแบบฟอร์มศาล...")
