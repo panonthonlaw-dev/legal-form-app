@@ -127,20 +127,50 @@ with st.form("main_form"):
     body = st.text_area("บรรยายฟ้อง ข้อ ๑", height=250)
     
     if st.form_submit_button("สร้างไฟล์ PDF"):
-        all_data = {'black_num': black_num, 'court': court, 'case_type': case_type,
-                    'day': day, 'month': month, 'year': year,
-                    'plaintiff': p_data, 'defendant': d_data, 'body': body}
+        # รวบรวมข้อมูล
+        all_data = {
+            'black_num': black_num, 'court': court, 'case_type': case_type,
+            'day': day, 'month': month, 'year': year,
+            'plaintiff': p_data, 'defendant': d_data, 'body': body
+        }
+        
         try:
+            # 1. ลองสร้าง Overlay
+            st.write("🔄 กำลังเตรียมข้อมูล...") # Debug log
             overlay = create_pdf_overlay(all_data)
+            
+            # 2. ลองเปิด Template
+            if not os.path.exists("template.pdf"):
+                st.error("❌ หาไฟล์ template.pdf ไม่เจอ")
+                st.stop()
+                
             existing_pdf = PdfReader(open("template.pdf", "rb"))
             output = PdfWriter()
+            
+            # 3. ลอง Merge ไฟล์
+            st.write("🔄 กำลังรวมข้อมูลลงในแบบฟอร์ม...") # Debug log
             page = existing_pdf.pages[0]
             page.merge_page(PdfReader(overlay).pages[0])
             output.add_page(page)
             
+            # 4. เขียนไฟล์ลง Memory
             final_pdf = io.BytesIO()
             output.write(final_pdf)
-            st.success("✅ สร้างไฟล์สำเร็จ!")
-            st.download_button("💾 ดาวน์โหลดไฟล์ PDF", final_pdf.getvalue(), f"คำฟ้อง_{p_data['name']}.pdf")
+            pdf_bytes = final_pdf.getvalue()
+            
+            if len(pdf_bytes) > 0:
+                st.success("✅ สร้างไฟล์สำเร็จ!")
+                # ปุ่มดาวน์โหลดต้องอยู่ตรงนี้
+                st.download_button(
+                    label="💾 คลิกที่นี่เพื่อดาวน์โหลดไฟล์ PDF",
+                    data=pdf_bytes,
+                    file_name=f"คำฟ้อง_{p_data['name']}.pdf",
+                    mime="application/pdf"
+                )
+            else:
+                st.warning("⚠️ ไฟล์ที่สร้างมีขนาด 0 byte โปรดตรวจสอบข้อมูล")
+
         except Exception as e:
-            st.error(f"Error: {e}")
+            # ถ้าเกิด Error อะไรก็ตาม ให้แสดงออกมาที่หน้าจอเลย
+            st.error("❌ เกิดข้อผิดพลาดทางเทคนิค:")
+            st.exception(e)
