@@ -89,8 +89,8 @@ st.sidebar.title("📚 วิชาที่เลือกศึกษา")
 choice = st.sidebar.radio("หมวดกฎหมาย:", ["หน้าแรก (Home)", "ค้ำประกัน", "จำนอง", "จำนำ"])
 
 if choice == "หน้าแรก (Home)":
-    st.markdown("<h1 style='text-align: center;'>Legal Mapping System v2.0</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>รวบรวมมาตราสำคัญทั้งหมด 46 มาตรา ตามคำขอ</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Legal Mapping System </h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>พัฒนาโดย ยามเรียนกฎหมาย</p>", unsafe_allow_html=True)
     st.divider()
     st.info("💡 เลือกหมวดหมู่จาก Sidebar เพื่อดูแผนผังมาตราและฎีกาที่เกี่ยวข้อง")
 
